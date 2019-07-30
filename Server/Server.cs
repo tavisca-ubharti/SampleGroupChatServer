@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
+using System.Threading.Tasks;
 
 namespace Server
 {
@@ -42,12 +42,12 @@ namespace Server
                         {
                             _connectionList[clientHandler] = userName;
                             clientHandler.Send(Encoding.ASCII.GetBytes("You have logged in..."));
+                            Console.WriteLine(userName+" join the chat");
                             BroadcastMessage(clientHandler, userName + " join the chat");
                         }
 
                     }
-                    var UserThread = new Thread(new ThreadStart(() => RecieveMessage(clientHandler)));
-                    UserThread.Start();
+                    Task.Factory.StartNew(() => RecieveMessage(clientHandler));
                 }
             }
             catch (Exception e)
@@ -58,6 +58,8 @@ namespace Server
 
         public static void RecieveMessage(Socket clientSocket)
         {
+            if (clientSocket == null)
+                return;
             var messageRecieved = new Byte[1024];
             var messageToBeBroadcast = string.Empty;
             while (true)
@@ -65,12 +67,12 @@ namespace Server
                 int numByte = clientSocket.Receive(messageRecieved);
                 messageToBeBroadcast = string.Format("{0} : {1}", _connectionList[clientSocket], Encoding.ASCII.GetString(messageRecieved, 0, numByte));
                 BroadcastMessage(clientSocket, messageToBeBroadcast);
-                if(Encoding.ASCII.GetString(messageRecieved, 0, numByte).Equals("bye"))
+                if (Encoding.ASCII.GetString(messageRecieved, 0, numByte).Equals("bye"))
                 {
                     messageToBeBroadcast = string.Format("{0} left the chat", _connectionList[clientSocket]);
+                    Console.WriteLine("{0} left the chat", _connectionList[clientSocket]);
                     BroadcastMessage(clientSocket, messageToBeBroadcast);
                     _connectionList.Remove(clientSocket);
-                    
                     break;
                 }
             }
@@ -79,10 +81,31 @@ namespace Server
         private static void BroadcastMessage(Socket clientSocket, string messageToBeBroadcast)
         {
             var message = Encoding.ASCII.GetBytes(messageToBeBroadcast);
+            Socket removeSocket = null;
             foreach(var client in _connectionList.Keys)
             {
                 if (client != clientSocket)
-                    client.Send(message);
+                {
+                    try
+                    {
+                        client.Send(message);
+                    }
+                    catch (Exception )
+                    {
+                        //messageToBeBroadcast = string.Format("{0} left the chat", _connectionList[client]);
+                        //Console.WriteLine("{0} left the chat", _connectionList[client]);
+                        removeSocket = client;
+                        //BroadcastMessage(client, messageToBeBroadcast);
+                        
+                    }
+                }
+            }
+            if (removeSocket != null)
+            {
+                messageToBeBroadcast = string.Format("{0} left the chat", _connectionList[removeSocket]);
+                _connectionList.Remove(removeSocket);
+                removeSocket = null;
+                BroadcastMessage(clientSocket, messageToBeBroadcast);
             }
         }
     }
