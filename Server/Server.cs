@@ -11,8 +11,6 @@ namespace Server
     {
         private static Dictionary<Socket, string> _connectionList = new Dictionary<Socket, string>();
 
-        public static object Encode { get; private set; }
-
         public static void StartServer()
         {
 
@@ -93,11 +91,7 @@ namespace Server
                     }
                     catch (Exception)
                     {
-                        //messageToBeBroadcast = string.Format("{0} left the chat", _connectionList[client]);
-                        //Console.WriteLine("{0} left the chat", _connectionList[client]);
                         removeSocket = client;
-                        //BroadcastMessage(client, messageToBeBroadcast);
-
                     }
                 }
             }
